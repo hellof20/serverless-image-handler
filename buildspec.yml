@@ -1,0 +1,21 @@
+version: 0.2
+
+env:
+  variables:
+     SOLUTION_NAME: "serverless-image-handler"
+     VERISON: "v4.1"
+     BUCKET_PREFIX: "aws-solutions"
+
+phases:
+  pre_build:
+    commands:
+      - cd deployment
+      - ./run-unit-tests.sh
+  build:
+    commands:
+      - ./build-s3-dist.sh $BUCKET_PREFIX $SOLUTION_NAME $VERISON
+  post_build:
+    commands:
+      - aws s3 ./regional-s3-assets/ s3://$BUCKET_PREFIX-cn-north-1/$SOLUTION_NAME/$VERISON/ --recursive --acl public-read --region cn-north-1
+      - aws s3 ./regional-s3-assets/ s3://$BUCKET_PREFIX-cn-northwest-1/$SOLUTION_NAME/$VERISON/ --recursive --acl public-read --region cn-northwest-1
+      - aws s3 ./global-s3-assets/serverless-image-handler.template s3://aws-solutions-reference/$SOLUTION_NAME/latest/serverless-image-handler.template --region cn-north-1 --acl public-read
