@@ -15,17 +15,20 @@ CloudFront 需要配置 ICP 备案的域名，在生产环境中，我们建议�
 在AWS上部署此架构的过程包括以下步骤。 有关详细说明，请遵循每个步骤的链接。
 
 [步骤 1. 启动 CloudFormation 堆栈](#%e6%ad%a5%e9%aa%a4-1-%e5%90%af%e5%8a%a8-cloudformation-%e5%a0%86%e6%a0%88)
-    * 将AWS CloudFormation模板启动到您的AWS账户中。
-    * 输入所需参数的值：CorsEnabled，CorsOrigins，SourceBuckets，DeployDemoUI，LogRetentionPeriod
-    * 查看其他模板参数，并在必要时进行调整。
+
+* 将AWS CloudFormation模板启动到您的AWS账户中。
+* 输入所需参数的值：CorsEnabled，CorsOrigins，SourceBuckets，DeployDemoUI，LogRetentionPeriod
+* 查看其他模板参数，并在必要时进行调整。
 
 [步骤 2. 配置 CloudFront CNAME 和 SSL 证书](#%e6%ad%a5%e9%aa%a4-2-%e9%85%8d%e7%bd%ae-cloudfront-cname-%e5%92%8c-ssl-%e8%af%81%e4%b9%a6)
-    * 为 Image Handler Distribution 配置 CNAME 和 SSL 证书
-    * 为 Demo UI Distribution 配置 CNAME
+
+* 为 Image Handler Distribution 配置 CNAME 和 SSL 证书
+* 为 Demo UI Distribution 配置 CNAME
 
 [步骤 3. 创建和使用图像请求](#%e6%ad%a5%e9%aa%a4-3-%e5%88%9b%e5%bb%ba%e5%92%8c%e4%bd%bf%e7%94%a8%e5%9b%be%e5%83%8f%e8%af%b7%e6%b1%82)
-    * 在前端设置图像请求。
-    * 将图像请求发送到您的API。
+
+* 在前端设置图像请求。
+* 将图像请求发送到您的API。
 
 
 ## 步骤 1. 启动 CloudFormation 堆栈
@@ -47,7 +50,7 @@ CloudFront 需要配置 ICP 备案的域名，在生产环境中，我们建议�
     | 参数               | 默认       | 描述                                                                                                                                                                                                         |   |   |
     |--------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|---|
     | CorsEnabled        | No         | 选择是否启用跨域资源共享（CORS）。如果您希望部署 Demo UI, 请选择 Yes。                                                                                                                                       |   |   |
-    | CorsOrigin         | *          | 该值将由API在Access-Control-Allow-Origin标头中返回。 星号（*）可以支持任何原点。 我们建议您指定一个特定来源（例如http://example.domain），以限制跨站点访问您的API。如果CorsEnabled参数设置为No，则忽略此值。 |   |   |
+    | CorsOrigin         | *          | 该值将由API在Access-Control-Allow-Origin标头中返回。 星号（*）可以支持任何原点。 我们建议您指定一个特定来源（例如`http://example.domain`),以限制跨站点访问您的API。如果CorsEnabled参数设置为No，则忽略此值。 |   |   |
     | SourceBuckets      | *需要输入* | 您帐户中的一个或多个S3存储桶，其中包含您将要操作的图像。 如果提供多个存储桶，请用逗号分隔。请确保选择的S3存储桶和这个解决方案位于同一个AWS区域。                                                             |   |   |
     | DeployDemoUI       | Yes        | 将部署到Demo S3存储桶的 Demo UI。了解更新信息，请访问[Appendix B](https://docs.aws.amazon.com/solutions/latest/serverless-image-handler/appendix-b.html)。                                                                                                                                            |   |   |
     | LogRetentionPeriod | 1          | 将Lambda日志数据保留在CloudWatch日志中的天数。                                                                                                                                                               |   |   |
