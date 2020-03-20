@@ -337,6 +337,16 @@
         },
         "ImageHandlerApiDeployment": {
             "Type": "AWS::ApiGateway::Deployment",
+            "Metadata": {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W68",
+                            "reason": "No usage plan needed"
+                        }
+                    ]
+                }
+            },
             "Properties": {
                 "RestApiId": { "Ref": "ImageHandlerApi" },
                 "StageName": "image",
@@ -355,6 +365,16 @@
         },
         "ImageHandlerFunction": {
             "Type": "AWS::Lambda::Function",
+            "Metadata": {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W58",
+                            "reason": "It has permission"
+                        }
+                    ]
+                }
+            },
             "Properties": {
                 "Description": "Serverless Image Handler - Function for performing image edits and manipulations.",
                 "Handler": "index.handler",
@@ -678,6 +698,16 @@
         },
         "CustomResourceFunction": {
             "Type": "AWS::Lambda::Function",
+            "Metadata": {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W58",
+                            "reason": "It has permission"
+                        }
+                    ]
+                }
+            },
             "Properties": {
                 "Code": {
                     "S3Bucket": {
