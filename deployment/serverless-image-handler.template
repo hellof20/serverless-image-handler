@@ -115,6 +115,16 @@
         },
         "ImageHandlerDistribution": {
             "Type": "AWS::CloudFront::Distribution",
+            "Metadata": {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W70",
+                            "reason": "CloudFront use default certificate"
+                        }
+                    ]
+                }
+            },
             "Properties": {
                 "DistributionConfig": {
                     "Origins": [{
@@ -644,6 +654,16 @@
         },
         "DemoDistribution": {
             "Type": "AWS::CloudFront::Distribution",
+            "Metadata": {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W70",
+                            "reason": "Cloudfront use default domain"
+                       }
+                    ]
+                }
+            },
             "Condition": "DeployDemoUICondition",
             "Properties": {
                 "DistributionConfig": {
