@@ -2,9 +2,11 @@
 #
 # This script should be run from the repo's deployment directory
 # cd deployment
-# ./build-s3-dist.sh source-bucket-base-name solution-name version-code template-bucket-name
+# ./build-s3-dist.sh template-bucket-name source-bucket-base-name solution-name version-code
 #
 # Parameters:
+#  - template-bucket-name: Name for S3 bucket location where the template will be located in.
+#
 #  - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda
 #    code from. The template will append '-[region_name]' to this bucket name.
 #    For example: ./build-s3-dist.sh solutions my-solution v1.0.0
@@ -14,12 +16,12 @@
 #
 #  - version-code: version of the package
 #
-#  - template-bucket-name: Name for S3 bucket location where the template will be located in.
+#
 
 # Check to see if input has been provided:
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
-    echo "Please provide the base source bucket name, trademark approved solution name and version where the lambda code will eventually reside."
-    echo "For example: ./build-s3-dist.sh solutions trademarked-solution-name v1.0.0 solutions-reference"
+    echo "Please provide the template bucket name, base source bucket name, trademark approved solution name and version where the lambda code will eventually reside."
+    echo "For example: ./build-s3-dist.sh solutions-reference solutions trademarked-solution-name v1.0.0 "
     exit 1
 fi
 
@@ -44,15 +46,15 @@ echo "CloudFormation Template"
 echo "------------------------------------------------------------------------------"
 cp $template_dir/serverless-image-handler.template $template_dist_dir/
 
-replace="s/%%BUCKET_NAME%%/$1/g"
+replace="s/%%BUCKET_NAME%%/$2/g"
 echo "sed -i -e $replace"
 sed -i -e $replace $template_dist_dir/serverless-image-handler.template
 
-replace="s/%%SOLUTION_NAME%%/$2/g"
+replace="s/%%SOLUTION_NAME%%/$3/g"
 echo "sed -i -e $replace"
 sed -i -e $replace $template_dist_dir/serverless-image-handler.template
 
-replace="s/%%VERSION%%/$3/g"
+replace="s/%%VERSION%%/$4/g"
 echo "sed -i -e $replace"
 sed -i -e $replace $template_dist_dir/serverless-image-handler.template
 
