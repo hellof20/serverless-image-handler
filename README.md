@@ -1,97 +1,104 @@
-# AWS 中国区部署手册
+# 无服务器图像处理解决方案部署手册
 
 [English](./AWS_CN_EN.md)
 
+该手册仅适用于在由**西云数据运行的AWS(宁夏)区域**和由**光环新网运行的AWS(北京)区域**部署无服务器图像处理解决方案. 如您希望在 AWS 其他区域
+部署该解决方案, 请[访问此链接](https://aws.amazon.com/solutions/implementations/serverless-image-handler/).
+
+## 架构图
+
+![](assets/serverless-image-handler-architecture.png)
+
+* Lambda 中读取 Amazon Simple Storage Service（Amazon S3）中存储的图像，并使用 [Sharp](https://github.com/lovell/sharp) 
+对图像进行处理.
+* API Gateway 用户接收 HTTP 请求，并触发 Lambda.
+* CloudFront 用于接收来自客户端的请求, 回源到 API Gateway. 对于已经处理过的图像请求，CloudFront 会缓存到 CDN 节点上，减少回源次数。
+
 ## 前提条件
 
-在启动解决方案的AWS CloudFormation模板之前，您必须在SourceBuckets模板参数中指定一个Amazon Simple Storage Service（Amazon S3）存储桶。 使用此存储桶存储要处理的图像。 请注意，如果您有多个图像源存储桶，则可以将它们指定为逗号分隔的值。 请在启动AWS CloudFormation模板的**同一AWS区域**中使用S3存储桶。
-
-CloudFront 需要配置 ICP 备案的域名，在生产环境中，我们建议您同时为 CloudFront 配置 SSL 证书来开启 HTTPS. 在部署本方案前，请先完成上传 SSL 证书到 AWS Identity and Access Management（IAM)。
-
-我们建议您在首次部署解决方案以测试解决方案的功能时，部署可选的演示用户界面。
-
-## 本章节涵盖内容
-
-在AWS上部署此架构的过程包括以下步骤。 有关详细说明，请遵循每个步骤的链接。
-
-[步骤 1. 启动 CloudFormation 堆栈](#%e6%ad%a5%e9%aa%a4-1-%e5%90%af%e5%8a%a8-cloudformation-%e5%a0%86%e6%a0%88)
-
-* 将AWS CloudFormation模板启动到您的AWS账户中。
-* 输入所需参数的值：CorsEnabled，CorsOrigins，SourceBuckets，DeployDemoUI，LogRetentionPeriod
-* 查看其他模板参数，并在必要时进行调整。
-
-[步骤 2. 配置 CloudFront CNAME 和 SSL 证书](#%e6%ad%a5%e9%aa%a4-2-%e9%85%8d%e7%bd%ae-cloudfront-cname-%e5%92%8c-ssl-%e8%af%81%e4%b9%a6)
-
-* 为 Image Handler Distribution 配置 CNAME 和 SSL 证书
-* 为 Demo UI Distribution 配置 CNAME
-
-[步骤 3. 创建和使用图像请求](#%e6%ad%a5%e9%aa%a4-3-%e5%88%9b%e5%bb%ba%e5%92%8c%e4%bd%bf%e7%94%a8%e5%9b%be%e5%83%8f%e8%af%b7%e6%b1%82)
-
-* 在前端设置图像请求。
-* 将图像请求发送到您的API。
-
+* **创建或指定一个或者多个用于图像存储的 Amazon S3 存储桶.** 在启动解决方案的 AWS CloudFormation 
+模板之前, 您必须在 SourceBuckets 模板参数中指定一个或者多个 Amazon S3 存储桶, 存储桶用于存储要处理的图像. 存储桶必须与即将启动的 
+AWS CloudFormation 堆栈位于**同一区域**.
+* **准备 ICP 备案过的域名.** 请准备一个或者两个经过 ICP 备案的域名, 一个用于部署无服务器图像处理程序, 另外一个用于部署演示程序(可选). 我们强烈
+建议您在首次部署解决方案以测试解决方案的功能时，部署可选的演示用户界面。
+* **(可选)上传 SSL 证书到 AWS Identity and Access Management（IAM).** 我们强烈建议您在生产环境中启用 SSL，如需启用 SSL, 请提前使用
+[AWS CLI](https://aws.amazon.com/cli/) 的 [`aws iam upload-server-certificate`](https://docs.aws.amazon.com/cli/latest/reference/iam/upload-server-certificate.html)
+命令将 SSL 证书上传到 IAM 中。如果您选择启用 SSL，并且使用DemoUI, 请务必为两个域名皆配置证书。
+* **配置 DNS 解析.** CloudFormation 堆栈部署完成后，您需要配置 CNAME 解析将域名指向 CloudFront, 并且等待解析生效后方可使用该解决方案。您
+可以通过查看 CloudFormation 的输出来获取 CloudFront 的地址。
 
 ## 步骤 1. 启动 CloudFormation 堆栈
 
-此自动化AWS CloudFormation模板在AWS Cloud上部署无服务器图像处理程序。
+此自动化AWS CloudFormation 模板在 AWS Cloud 上部署无服务器图像处理程序。
 
 您负责运行此解决方案时使用的AWS服务的成本。 有关更多详细信息，请参见“费用”部分。 有关完整详细信息，请参阅此解决方案中将使用的每个AWS服务的定价页面。
 
-1. 登录到AWS管理控制台，然后单击下面的按钮以启动无服务器图像处理程序AWS CloudFormation模板。
+1. 登录到AWS管理控制台，然后单击下面的按钮以启动无服务器图像处理程序 AWS CloudFormation 模板。
 
     [![Launch Stack](launch-stack.svg)](https://cn-northwest-1.console.amazonaws.cn/cloudformation/home?region=cn-northwest-1#/stacks/create/template?stackName=ServerlessImageHandler&templateURL=https:%2F%2Faws-solutions-reference.s3.cn-north-1.amazonaws.com.cn%2Fserverless-image-handler%2Flatest%2Fserverless-image-handler.template)
+    
 1. 默认情况下，该模板在 AWS 宁夏区域启动。 要在其他AWS区域中启动无服务器图像处理程序，请使用控制台导航栏中的区域选择器。
 
 1. 在**创建堆栈**页面上，确认 **Amazon S3 URL** 文本框中显示正确的模板URL，然后选择**下一步**。
 
 1. 在**指定堆栈详细信息**页面上，为解决方案堆栈分配名称。
 
-1. 在**参数**下，查看模板的参数并根据需要进行修改。 此解决方案使用以下默认值。如果您希望部署 Demo UI, 请为 CorsEnabled 和 DeployDemoUI 参数选择 **Yes**。
-    | 参数               | 默认       | 描述                                                                                                                                                                                                         |   |   |
-    |--------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|---|
-    | CorsEnabled        | No         | 选择是否启用跨域资源共享（CORS）。如果您希望部署 Demo UI, 请选择 Yes。                                                                                                                                       |   |   |
-    | CorsOrigin         | *          | 该值将由API在Access-Control-Allow-Origin标头中返回。 星号（*）可以支持任何原点。 我们建议您指定一个特定来源（例如`http://example.domain`),以限制跨站点访问您的API。如果CorsEnabled参数设置为No，则忽略此值。 |   |   |
-    | SourceBuckets      | *需要输入* | 您帐户中的一个或多个S3存储桶，其中包含您将要操作的图像。 如果提供多个存储桶，请用逗号分隔。请确保选择的S3存储桶和这个解决方案位于同一个AWS区域。                                                             |   |   |
-    | DeployDemoUI       | Yes        | 将部署到Demo S3存储桶的 Demo UI。了解更新信息，请访问[Appendix B](https://docs.aws.amazon.com/solutions/latest/serverless-image-handler/appendix-b.html)。                                                                                                                                            |   |   |
-    | LogRetentionPeriod | 1          | 将Lambda日志数据保留在CloudWatch日志中的天数。                                                                                                                                                               |   |   |
+1. 在**参数**下，查看模板的参数并根据需要进行修改。 此解决方案使用以下默认值。
+    
+    **API Configuration**
+    
+    | 参数               | 默认       | 描述                                                         |
+    | ------------------ | ---------- | ------------------------------------------------------------ |
+    | ApiDomain          | 需要输入   | 访问该服务的域名，必须是 ICP 备案过的域名 |
+    | ApiCertificateArn  | 需要输入(可选)          | SSL 证书ID, 需提前上传到 IAM, 如不输入，则不启用 HTTPS 访问  |
+        
+    **CORS Options**
+    
+    | 参数               | 默认       | 描述                                                                                                                                                                                                         |
+    |--------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | CorsEnabled        | Yes         | 选择是否启用跨域资源共享（CORS）。如果您希望部署 Demo UI, 请选择 Yes。                                                                                                                                       |
+    | CorsOrigin         | *          | 该值将由API在Access-Control-Allow-Origin标头中返回。 星号（*）可以支持任何原点。 我们建议您指定一个特定来源（例如`http://example.domain`),以限制跨站点访问您的API。如果CorsEnabled参数设置为No，则忽略此值。 |
 
+    **Image Sources**
+    
+    | 参数               | 默认       | 描述                                                                                                                                                                                                         |
+    |-------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | SourceBuckets     | 需要输入    | 您帐户中的一个或多个S3存储桶，其中包含您将要操作的图像。 如果提供多个存储桶，请用逗号分隔。请确保选择的S3存储桶和这个解决方案位于同一个AWS区域。|
+
+    **Demo UI**
+    
+    | 参数               | 默认       | 描述                                                                                                                                                                                                         |
+    |-------------------|------------|--------------|
+    | DeployDemoUI     | Yes         | 将部署到Demo S3存储桶的 Demo UI |
+    | DemoUIDomain     | 需要输入         | Demo UI 所使用的域名，必须是 ICP 备案过的域名|
+    | DemoUICertificateArn     | 需要输入(可选)         | SSL 证书ID, 需提前上传到 IAM, 如不输入，则不启用 HTTPS 访问 |
+    
+    **Event Logging**
+    
+    | 参数               | 默认       | 描述                                                                                                                                                                                                         |
+    |-------------------|------------|--------------------------------------------|
+    | LogRetentionPeriod| 1          | 将Lambda日志数据保留在CloudWatch日志中的天数 |    
+    
 1. 选择**下一步**。
-   
+  
 1. 在**配置堆栈选项**页面上，选择“下一步”。
 
 1. 在**审核**页面上，查看并确认设置。 确保选中确认模板将创建 AWS Identity and Access Management（IAM）资源的框。
 
 1. 选择**创建堆栈**以部署堆栈。
 
-您可以在AWS CloudFormation控制台的**状态**列中查看堆栈的状态。 您应该在大约30分钟内看到状态为CREATE_COMPLETE。
+您可以在AWS CloudFormation控制台的**状态**列中查看堆栈的状态。 您应该在大约30分钟内看到状态为 CREATE_COMPLETE。
 
-## 步骤 2. 配置 CloudFront CNAME 和 SSL 证书
+## 步骤 2. 配置 DNS 解析
 
-1. 点击注释为 **Image handler distribution** 的 CloudFront 分配。
+1. 点击创建完毕的 CloudFormation 堆栈，选择**输出**
 
-1. 选择**常规**选项卡下的**编辑**按钮。
-
-1. 在**备用域名(CNAMEs)**下，输入 ICP 备案过的域名。
-
-1. 在**SSL 证书**处，选中**自定义 SSL 证书**，并且选择您之前上传到 IAM 的 SSL 证书。
-
-1. 选择**是，请修改**按钮。
-
-如果您选择同时部署 Demo UI, 则也需要配置 ICP 备案过的域名，**可不配置 SSL 证书**。
-
-1. 点击注释为 **Website distribution for solution** 的 CloudFront 分配。
-
-1. 选择**常规**选项卡下的**编辑**按钮。
-
-1. 在**备用域名(CNAMEs)**下，输入 ICP 备案过的域名。
-
-1. 选择**是，请修改**按钮。
+1. 找到 **ApiEndpointCNAME** 和 **DemoUrlCNAME**, 
 
 在为 CloudFront 配置完 CNAME 之后，在您的 DNS 解析服务器配置 CNAME 记录，并指向 CloudFront 分配的默认域名。
 
-如果您选择部署 Demo UI, 则他的访问地址为 `https://demo-website-domain/index.html`。您可以先使用 Demo UI 来测试该方案。
 
-## 步骤 3. 创建和使用图像请求
+## 步骤 2. 创建和使用图像请求
 
 该解决方案生成一个CloudFront域名，该域名使您可以通过图像处理程序API访问原始图像和修改后的图像。您为 Image Handler Distribution 配置的CNAME即为该方案的域名，我们称之为 **ApiEndpoint**。 图像的位置和要进行的编辑等参数是在前端的JSON对象中指定的。
 

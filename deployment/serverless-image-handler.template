@@ -2,9 +2,19 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "(SO0023) - Serverless Image Handler: This template deploys and configures a serverless architecture that is optimized for dynamic image manipulation and delivery at low latency and cost. Leverages SharpJS for image processing. Template version %%VERSION%%",
     "Parameters": {
+        "ApiDomain": {
+            "Description": "Choose an ICP licensed domain for the Image Handler distribution",
+            "Type": "String",
+            "AllowedPattern": "^$|(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
+        },
+        "ApiCertificateIamId": {
+            "Description": "[Optional] Do you want enable SSL certificate for the Image Handler distribution? If yes, please upload SSL certificate to IAM using AWS CLI",
+            "Type": "String",
+            "Default": ""
+        },
         "CorsEnabled" : {
             "Description" : "Would you like to enable Cross-Origin Resource Sharing (CORS) for the image handler API? Select 'Yes' if so.",
-            "Default" : "No",
+            "Default" : "Yes",
             "Type" : "String",
             "AllowedValues" : [ "Yes", "No" ]
         },
@@ -25,6 +35,17 @@
             "Type" : "String",
             "AllowedValues" : [ "Yes", "No" ]
         },
+        "DemoUIDomain": {
+            "Description": "Choose an ICP licensed domain for the Image Handler DemoUI",
+            "Type": "String",
+            "AllowedPattern": "^$|(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
+            "Default": ""
+        },
+        "DemoUICertificateIamId": {
+            "Description": "[Optional] Do you want enable SSL certificate for the DemoUI? If yes, please upload SSL certificate to IAM using AWS CLI",
+            "Type": "String",
+            "Default": ""
+        },
         "LogRetentionPeriod" : {
             "Description" : "This solution automatically logs events to Amazon CloudWatch. Select the amount of time for CloudWatch logs from this solution to be retained (in days).",
             "Default" : 1,
@@ -36,6 +57,10 @@
         "AWS::CloudFormation::Interface": {
             "ParameterGroups": [
                 {
+                    "Label": { "default": "API Configuration" },
+                    "Parameters": [ "ApiDomain", "ApiCertificateIamId" ]
+                },
+                {
                     "Label": { "default": "CORS Options" },
                     "Parameters": [ "CorsEnabled", "CorsOrigin" ]
                 },
@@ -45,7 +70,7 @@
                 },
                 {
                     "Label": { "default": "Demo UI" },
-                    "Parameters": [ "DeployDemoUI" ]
+                    "Parameters": [ "DeployDemoUI", "DemoUIDomain", "DemoUICertificateIamId" ]
                 },
                 {
                     "Label": { "default": "Event Logging" },
@@ -58,10 +83,8 @@
         "DeployDemoUICondition": { "Fn::Equals": [ { "Ref": "DeployDemoUI" }, "Yes" ] },
         "EnableCorsCondition" : { "Fn::Equals": [ { "Ref": "CorsEnabled" }, "Yes" ] },
         "IsChinaRegionCondition": { "Fn::Equals": [ {"Ref": "AWS::Partition"}, "aws-cn" ] },
-        "DeployAOICondition": { "Fn::And": [ 
-            { "Fn::Not": [ { "Fn::Equals": [ {"Ref": "AWS::Partition"}, "aws-cn" ] } ] },
-            { "Fn::Equals": [ { "Ref": "DeployDemoUI" }, "Yes" ] }
-        ] }
+        "ApiCertificateCondition": { "Fn::Not": [ { "Fn::Equals": [ { "Ref": "ApiCertificateIamId" }, "" ] } ] },
+        "DemoUICertificateCondition": { "Fn::Not": [ { "Fn::Equals": [ { "Ref": "DemoUICertificateIamId" }, "" ] } ] }
     },
     "Mappings": {
         "Send": {
@@ -127,14 +150,20 @@
             },
             "Properties": {
                 "DistributionConfig": {
+                    "Aliases": [ {"Ref": "ApiDomain" } ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "ApiCertificateCondition",
+                            {
+                                "IamCertificateId": { "Ref": "ApiCertificateIamId" },
+                                "SslSupportMethod": "sni-only",
+                                "MinimumProtocolVersion": "TLSv1.2_2018"
+                            },
+                            {"Ref": "AWS::NoValue"}
+                        ]
+                    },
                     "Origins": [{
-                        "DomainName": {
-                            "Fn::If": [
-                                "IsChinaRegionCondition",
-                                { "Fn::Sub": "${ImageHandlerApi}.execute-api.${AWS::Region}.amazonaws.com.cn" },
-                                { "Fn::Sub": "${ImageHandlerApi}.execute-api.${AWS::Region}.amazonaws.com" }
-                            ]
-                        },
+                        "DomainName": { "Fn::Sub": "${ImageHandlerApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}" },
                         "Id": { "Ref": "ImageHandlerApi" },
                         "OriginPath": "/image",
                         "CustomOriginConfig": {
@@ -154,7 +183,13 @@
                             "Headers": [ "Origin" ],
                             "Cookies": { "Forward": "none" }
                         },
-                        "ViewerProtocolPolicy": "https-only"
+                        "ViewerProtocolPolicy": {
+                            "Fn::If": [
+                                "ApiCertificateCondition",
+                                "redirect-to-https",
+                                "allow-all"
+                            ]
+                        }
                     },
                     "CustomErrorResponses": [
                         {
@@ -588,10 +623,10 @@
                 },
                 "AccessControl": "Private",
                 "PublicAccessBlockConfiguration": {
-                    "BlockPublicAcls": { "Fn::If": [ "IsChinaRegionCondition", false, true ] },
-                    "BlockPublicPolicy": { "Fn::If": [ "IsChinaRegionCondition", false, true ] },
-                    "IgnorePublicAcls": { "Fn::If": [ "IsChinaRegionCondition", false, true ] },
-                    "RestrictPublicBuckets": { "Fn::If": [ "IsChinaRegionCondition", false, true ] }
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
                 }
             },
             "Metadata": {
@@ -607,7 +642,7 @@
         },
         "DemoBucketPolicy": {
             "Type": "AWS::S3::BucketPolicy",
-            "Condition": "DeployAOICondition",
+            "Condition": "DeployDemoUICondition",
             "Properties": {
                 "Bucket": { "Ref": "DemoBucket" },
                 "PolicyDocument": {
@@ -643,7 +678,7 @@
         },
         "DemoOriginAccessIdentity": {
             "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
-            "Condition": "DeployAOICondition",
+            "Condition": "DeployDemoUICondition",
             "Properties": {
                 "CloudFrontOriginAccessIdentityConfig": {
                     "Comment": {
@@ -667,21 +702,25 @@
             "Condition": "DeployDemoUICondition",
             "Properties": {
                 "DistributionConfig": {
+                    "Aliases": [ {"Ref": "DemoUIDomain" } ],
+                    "ViewerCertificate": {
+                        "Fn::If": [
+                            "DemoUICertificateCondition",
+                            {
+                                "IamCertificateId": { "Ref": "DemoUICertificateIamId" },
+                                "SslSupportMethod": "sni-only",
+                                "MinimumProtocolVersion": "TLSv1.2_2018"
+                            },
+                            {"Ref": "AWS::NoValue"}
+                        ]
+                    },
                     "Comment": "Website distribution for solution",
                     "Origins": [
                         {
                             "Id": "S3-solution-website",
-                            "DomainName": { "Fn::If": [
-                                "IsChinaRegionCondition",
-                                { "Fn::Sub": "${DemoBucket}.s3.${AWS::Region}.amazonaws.com.cn" },
-                                { "Fn::Sub": "${DemoBucket}.s3.${AWS::Region}.amazonaws.com" }
-                            ]},
+                            "DomainName": { "Fn::Sub": "${DemoBucket}.s3.${AWS::Region}.${AWS::URLSuffix}" },
                             "S3OriginConfig": {
-                                "OriginAccessIdentity": { "Fn::If": [
-                                    "IsChinaRegionCondition",
-                                    "",
-                                    { "Fn::Sub": "origin-access-identity/cloudfront/${DemoOriginAccessIdentity}" }
-                                ] }
+                                "OriginAccessIdentity": { "Fn::Sub": "origin-access-identity/cloudfront/${DemoOriginAccessIdentity}" }
                             }
                         }
                     ],
@@ -692,14 +731,15 @@
                         "ForwardedValues": {
                             "QueryString": false
                         },
-                        "ViewerProtocolPolicy": { "Fn::If": [
-                            "IsChinaRegionCondition",
-                            "allow-all",
-                            "redirect-to-https"
-                        ]}
+                        "ViewerProtocolPolicy": {
+                            "Fn::If": [
+                                "DemoUICertificateCondition",
+                                "redirect-to-https",
+                                "allow-all"
+                            ]
+                        }
                     },
                     "IPV6Enabled": { "Fn::If": [ "IsChinaRegionCondition", false, true ] },
-                    "ViewerCertificate": { "CloudFrontDefaultCertificate": true },
                     "Enabled": true,
                     "HttpVersion": "http2",
                     "Logging": {
@@ -819,13 +859,20 @@
                         {
                             "Effect": "Allow",
                             "Action": [
-                                "s3:GetObject",
-                                "s3:PutObject",
-                                "s3:PutObjectACL",
                                 "s3:ListBucket"
                             ],
                             "Resource": [
                                 { "Fn::Sub": "arn:${AWS::Partition}:s3:::*" }
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:PutObject"
+                            ],
+                            "Resource": [
+                                { "Fn::Sub": "arn:${AWS::Partition}:s3:::*/*" }
                             ]
                         }
                     ]
@@ -869,7 +916,13 @@
                     "apiEndpoint" : { 
                         "Fn::If": [
                             "IsChinaRegionCondition",
-                            { "Fn::Sub": "https://${ImageHandlerApi}.execute-api.${AWS::Region}.amazonaws.com.cn/image" },
+                            {
+                                "Fn::If": [
+                                    "ApiCertificateCondition",
+                                    { "Fn::Sub": "https://${ApiDomain}" },
+                                    { "Fn::Sub": "http://${ApiDomain}" }
+                                ]
+                            },
                             { "Fn::Sub" : "https://${ImageHandlerDistribution.DomainName}" }
                         ]
                     }
@@ -923,12 +976,32 @@
     "Outputs" : {
         "ApiEndpoint" : {
             "Description" : "Link to API endpoint for sending image requests to.",
-            "Value" : { "Fn::Sub" : "https://${ImageHandlerDistribution.DomainName}" }
+            "Value" : {
+                "Fn::If": [
+                    "ApiCertificateCondition",
+                    { "Fn::Sub" : "https://${ApiDomain}" },
+                    { "Fn::Sub" : "http://${ApiDomain}" }
+                ]
+            }
+        },
+        "ApiEndpointCNAME" : {
+            "Description" : "CloudFront CNAME for API Endpoint. Configure your DNS resolver and point domain to this address",
+            "Value" : { "Fn::Sub" : "${ImageHandlerDistribution.DomainName}" }
         },
         "DemoUrl" : {
             "Condition" : "DeployDemoUICondition",
             "Description" : "Link to the demo user interface for the solution.",
-            "Value" : { "Fn::Sub" : "https://${DemoDistribution.DomainName}/index.html" }
+            "Value" : {
+                "Fn::If": [
+                    "DemoUICertificateCondition",
+                    { "Fn::Sub" : "https://${DemoUIDomain}/index.html" },
+                    { "Fn::Sub" : "http://${DemoUIDomain}/index.html" }
+                ]
+            }
+        },
+        "DemoUrlCNAME" : {
+            "Description" : "CloudFront CNAME for DemoUI. Configure your DNS resolver and point domain to this address",
+            "Value" : { "Fn::Sub" : "${DemoDistribution.DomainName}" }
         },
         "SourceBuckets" : {
             "Description" : "Amazon S3 bucket location containing original image files.",

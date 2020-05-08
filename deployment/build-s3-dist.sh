@@ -19,11 +19,11 @@
 #
 
 # Check to see if input has been provided:
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
-    echo "Please provide the template bucket name, base source bucket name, trademark approved solution name and version where the lambda code will eventually reside."
-    echo "For example: ./build-s3-dist.sh solutions-reference solutions trademarked-solution-name v1.0.0 "
-    exit 1
-fi
+  if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
+      echo "Please provide the template bucket name, base source bucket name, trademark approved solution name and version where the lambda code will eventually reside."
+      echo "For example: ./build-s3-dist.sh solutions-reference solutions trademarked-solution-name v1.0.0 "
+      exit 1
+  fi
 
 set -e
 
