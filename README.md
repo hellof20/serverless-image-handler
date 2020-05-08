@@ -23,7 +23,7 @@ AWS CloudFormation 堆栈位于**同一区域**.
 建议您在首次部署解决方案以测试解决方案的功能时，部署可选的演示用户界面。
 * **(可选)上传 SSL 证书到 AWS Identity and Access Management（IAM).** 我们强烈建议您在生产环境中启用 SSL，如需启用 SSL, 请提前使用
 [AWS CLI](https://aws.amazon.com/cli/) 的 [`aws iam upload-server-certificate`](https://docs.aws.amazon.com/cli/latest/reference/iam/upload-server-certificate.html)
-命令将 SSL 证书上传到 IAM 中。
+命令将 SSL 证书上传到 IAM 中。如果您选择启用 SSL，并且使用DemoUI, 请务必为两个域名皆配置证书。
 * **配置 DNS 解析.** CloudFormation 堆栈部署完成后，您需要配置 CNAME 解析将域名指向 CloudFront, 并且等待解析生效后方可使用该解决方案。您
 可以通过查看 CloudFormation 的输出来获取 CloudFront 的地址。
 
