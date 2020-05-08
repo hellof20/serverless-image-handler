@@ -7,10 +7,9 @@
             "Type": "String",
             "AllowedPattern": "^$|(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
         },
-        "ApiCertificateArn": {
+        "ApiCertificateIamId": {
             "Description": "[Optional] Do you want enable SSL certificate for the Image Handler distribution? If yes, please upload SSL certificate to IAM using AWS CLI",
             "Type": "String",
-            "AllowedPattern": "^$|(arn:aws-cn:iam)::([0-9]{12}):server-certificate/(.*)$",
             "Default": ""
         },
         "CorsEnabled" : {
@@ -42,10 +41,9 @@
             "AllowedPattern": "^$|(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
             "Default": ""
         },
-        "DemoUICertificateArn": {
+        "DemoUICertificateIamId": {
             "Description": "[Optional] Do you want enable SSL certificate for the DemoUI? If yes, please upload SSL certificate to IAM using AWS CLI",
             "Type": "String",
-            "AllowedPattern": "^$|(arn:aws-cn:iam)::([0-9]{12}):server-certificate/(.*)$",
             "Default": ""
         },
         "LogRetentionPeriod" : {
@@ -60,7 +58,7 @@
             "ParameterGroups": [
                 {
                     "Label": { "default": "API Configuration" },
-                    "Parameters": [ "ApiDomain", "ApiCertificateArn" ]
+                    "Parameters": [ "ApiDomain", "ApiCertificateIamId" ]
                 },
                 {
                     "Label": { "default": "CORS Options" },
@@ -72,7 +70,7 @@
                 },
                 {
                     "Label": { "default": "Demo UI" },
-                    "Parameters": [ "DeployDemoUI", "DemoUIDomain", "DemoUICertificateArn" ]
+                    "Parameters": [ "DeployDemoUI", "DemoUIDomain", "DemoUICertificateIamId" ]
                 },
                 {
                     "Label": { "default": "Event Logging" },
@@ -85,8 +83,8 @@
         "DeployDemoUICondition": { "Fn::Equals": [ { "Ref": "DeployDemoUI" }, "Yes" ] },
         "EnableCorsCondition" : { "Fn::Equals": [ { "Ref": "CorsEnabled" }, "Yes" ] },
         "IsChinaRegionCondition": { "Fn::Equals": [ {"Ref": "AWS::Partition"}, "aws-cn" ] },
-        "ApiCertificateCondition": { "Fn::Not": [ { "Fn::Equals": [ { "Ref": "ApiCertificateArn" }, "" ] } ] },
-        "DemoUICertificateCondition": { "Fn::Not": [ { "Fn::Equals": [ { "Ref": "DemoUICertificateArn" }, "" ] } ] }
+        "ApiCertificateCondition": { "Fn::Not": [ { "Fn::Equals": [ { "Ref": "ApiCertificateIamId" }, "" ] } ] },
+        "DemoUICertificateCondition": { "Fn::Not": [ { "Fn::Equals": [ { "Ref": "DemoUICertificateIamId" }, "" ] } ] }
     },
     "Mappings": {
         "Send": {
@@ -157,7 +155,7 @@
                         "Fn::If": [
                             "ApiCertificateCondition",
                             {
-                                "IamCertificateId": { "Ref": "ApiCertificateArn" },
+                                "IamCertificateId": { "Ref": "ApiCertificateIamId" },
                                 "SslSupportMethod": "sni-only",
                                 "MinimumProtocolVersion": "TLSv1.2_2018"
                             },
@@ -709,7 +707,7 @@
                         "Fn::If": [
                             "DemoUICertificateCondition",
                             {
-                                "IamCertificateId": { "Ref": "DemoUICertificateArn" },
+                                "IamCertificateId": { "Ref": "DemoUICertificateIamId" },
                                 "SslSupportMethod": "sni-only",
                                 "MinimumProtocolVersion": "TLSv1.2_2018"
                             },
