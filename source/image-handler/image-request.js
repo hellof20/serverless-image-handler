@@ -22,7 +22,8 @@ class ImageRequest {
      */
     async setup(event) {
         try {
-            this.requestType = this.parseRequestType(event);
+            this.requestType = 'Default';
+            this.S3StoredKey = this.getS3StoredKey(event);
             this.bucket = this.parseImageBucket(event, this.requestType);
             this.key = this.parseImageKey(event, this.requestType);
             this.edits = this.parseImageEdits(event, this.requestType);
@@ -31,6 +32,10 @@ class ImageRequest {
         } catch (err) {
             return Promise.reject(err);
         }
+    }
+    
+    getS3StoredKey(event){
+        return event["path"];
     }
 
     /**
@@ -190,6 +195,10 @@ class ImageRequest {
      * @param {Object} event - The proxied request object.
      */
     decodeRequest(event) {
+        const queryString = event["queryStringParameters"];
+        const toBuffer = Buffer.from(queryString['query'], 'base64');
+        console.log(JSON.parse(toBuffer.toString()))
+        return JSON.parse(toBuffer.toString());
         const path = event["path"];
         if (path !== undefined) {
             const splitPath = path.split("/");
