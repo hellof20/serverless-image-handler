@@ -29,6 +29,23 @@ class ImageHandler {
                 await modifiedImage.toFormat(request.outputFormat);
             }
             const bufferImage = await modifiedImage.toBuffer();
+            const S3 = require('aws-sdk/clients/s3');
+            const s3 = new S3();
+            const bucket = request.bucket;
+            const S3StoredKey = request.S3StoredKey;
+            const base64 = bufferImage.toString('base64')
+            const base64Data = new Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+            const params  = { Body: base64Data, Bucket: bucket, Key: newkey.substr(1), ContentType: 'image/jpeg', ContentEncoding: 'base64' };
+            let location = '';
+            let key = '';
+            try {
+                const { Location, Key } = await s3.upload(params).promise();
+                location = Location;
+                key = Key;
+            } catch (error) {
+                console.log(error)
+            }
+            console.log(location, key);
             return bufferImage.toString('base64');
         } else {
             return originalImage.toString('base64');
